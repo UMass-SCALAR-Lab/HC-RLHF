@@ -436,3 +436,4 @@ safety_test.py
 compare.py
 cost_histogram.py
 cpy.py
+scripts/*.sbatch
