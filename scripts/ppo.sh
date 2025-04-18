@@ -34,6 +34,9 @@ OUTPUT_DIR="${ROOT_DIR}/output/ppo"
 unset HOSTFILE
 ZERO_STAGE=3
 OFFLOAD="none"
+
+LOG_RUN_NAME="ppo-1gpu"
+
 while [[ "$#" -gt 0 ]]; do
 	arg="$1"
 	shift
@@ -87,6 +90,13 @@ while [[ "$#" -gt 0 ]]; do
 		--offload=*)
 			OFFLOAD="${arg#*=}"
 			;;
+		--log_run_name)
+			LOG_RUN_NAME="$1"
+			shift
+			;;
+		--log_run_name=*)
+			LOG_RUN_NAME="${arg#*=}"
+			;;
 		*)
 			echo "Unknown parameter passed: '${arg}'" >&2
 			exit 1
@@ -135,15 +145,15 @@ deepspeed "${DEEPSPEED_ARGS[@]}" \
 	--reward_model_name_or_path "${REWARD_MODEL_NAME_OR_PATH}" \
 	--reward_critic_model_name_or_path "${REWARD_CRITIC_MODEL_NAME_OR_PATH}" \
 	--max_length 512 \
-	--temperature 1.0 \
+	--temperature 1.2 \
 	--num_return_sequences 1 \
-	--repetition_penalty 1.0 \
+	--repetition_penalty 1.2 \
 	--trust_remote_code True \
 	--epochs 1 \
 	--update_iters 1 \
 	--per_device_prompt_batch_size 16 \
 	--per_device_train_batch_size 16 \
-	--gradient_accumulation_steps 1 \
+	--gradient_accumulation_steps 4 \
 	--actor_lr 1e-5 \
 	--actor_weight_decay 0.01 \
 	--actor_lr_scheduler_type cosine \
@@ -156,14 +166,16 @@ deepspeed "${DEEPSPEED_ARGS[@]}" \
 	--critic_gradient_checkpointing \
 	--normalize_reward False \
 	--seed 42 \
-	--kl_coeff 0.02 \
-	--clip_range_ratio 0.2 \
+	--kl_coeff 0.1 \
+	--clip_range_ratio 0.1 \
 	--clip_range_score 50.0 \
 	--clip_range_value 5.0 \
 	--ptx_coeff 16.0 \
 	--output_dir "${OUTPUT_DIR}" \
 	--log_type wandb \
 	--log_project Safe-RLHF-PPO \
+	--log_run_name "${LOG_RUN_NAME}" \
+	--save_interval 500 \
 	--zero_stage "${ZERO_STAGE}" \
 	--offload "${OFFLOAD}" \
 	--bf16 True \

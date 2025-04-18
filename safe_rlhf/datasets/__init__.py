@@ -34,6 +34,10 @@ from safe_rlhf.datasets.preference import (
     PreferenceCollator,
     PreferenceDataset,
     PreferenceSample,
+    PrefOverPrefBatch,
+    PrefOverPrefCollator,
+    PrefOverPrefDataset,
+    PrefOverPrefSample,
 )
 from safe_rlhf.datasets.prompt_only import (
     PromptOnlyBatch,
@@ -67,6 +71,10 @@ __all__ = [
     'PreferenceSample',
     'PreferenceBatch',
     'PreferenceCollator',
+    'PrefOverPrefBatch',
+    'PrefOverPrefCollator',
+    'PrefOverPrefDataset',
+    'PrefOverPrefSample',
     'PromptOnlyDataset',
     'PromptOnlyCollator',
     'PromptOnlySample',

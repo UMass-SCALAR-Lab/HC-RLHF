@@ -17,6 +17,8 @@
 from safe_rlhf.trainers.base import TrainerBase
 from safe_rlhf.trainers.rl_trainer import RLTrainer
 from safe_rlhf.trainers.supervised_trainer import SupervisedTrainer
+from safe_rlhf.trainers.reinforce_trainer import ReinforceTrainer
+from safe_rlhf.trainers.supervised_trainer_ema import SupervisedTrainerEMA
 
 
-__all__ = ['TrainerBase', 'RLTrainer', 'SupervisedTrainer']
+__all__ = ['TrainerBase', 'RLTrainer', 'SupervisedTrainer', 'ReinforceTrainer', 'SupervisedTrainerEMA']

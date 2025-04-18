@@ -17,6 +17,8 @@
 from safe_rlhf.algorithms.ppo import PPOTrainer
 from safe_rlhf.algorithms.ppo_lag import PPOLagTrainer
 from safe_rlhf.algorithms.ppo_reward_shaping import PPORewardShapingTrainer
+from safe_rlhf.algorithms.reinforce_lag import ReinforceCILagTrainer
+from safe_rlhf.algorithms.dpo_pop import DPO_PoP_Trainer
 
 
-__all__ = ['PPOTrainer', 'PPOLagTrainer', 'PPORewardShapingTrainer']
+__all__ = ['PPOTrainer', 'PPOLagTrainer', 'PPORewardShapingTrainer', 'ReinforceCILagTrainer', 'DPO_PoP_Trainer']

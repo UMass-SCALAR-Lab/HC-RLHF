@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+import random
 from datasets import load_dataset
 from safe_rlhf.datasets.base import RawDataset, RawSample
 
@@ -29,8 +30,9 @@ __all__ = [
     'SafeRLHF30KTrainDataset',
     'SafeRLHF30KTestDataset',
     'SafeRLHF10KTrainDataset',
+    'SafeRLHF_YC_Val',
+    'SafeRLHF_YC_Safety'
 ]
-
 
 class SafeRLHFDataset(RawDataset):
     SPLIT: ClassVar[str]
@@ -38,6 +40,23 @@ class SafeRLHFDataset(RawDataset):
 
     def __init__(self, path: str | None = None) -> None:
         self.data = load_dataset(path or self.PATH, split=self.SPLIT)
+
+        # For train
+        # seed_value = random.randint(0, 1000000)
+        # downsample_size = 1000
+        # old_size = self.data.num_rows
+        # print(f"Shuffling the dataset with seed: {seed_value}")
+        # self.data = self.data.shuffle(seed=seed_value)
+        # self.data = self.data.select(range(downsample_size))
+        # print(f"Truncated the Dataset from size {old_size} to {self.data.num_rows}")
+
+        # For Eval
+        # downsample_size = 100
+        # old_size = self.data.num_rows
+        # print(f"Shuffling the dataset with seed: {42}")
+        # self.data = self.data.shuffle(seed=42)
+        # self.data = self.data.select(range(downsample_size))
+        # print(f"Truncated the Dataset from size {old_size} to {self.data.num_rows}")
 
     def __getitem__(self, index: int) -> RawSample:
         data = self.data[index]
@@ -88,3 +107,23 @@ class SafeRLHF10KTrainDataset(SafeRLHFDataset):
     ALIASES: tuple[str, ...] = ('PKU-Alignment/PKU-SafeRLHF-10K/train',)
     PATH: str = 'PKU-Alignment/PKU-SafeRLHF-10K'
     SPLIT: str = 'train'
+
+    # def __init__(self, path: str | None = None) -> None:
+    #     self.data = load_dataset(path or self.PATH, split=self.SPLIT)
+    #     self.data = self.data.shuffle(seed=42)
+    #     self.data = self.data.select(range(100))
+
+class SafeRLHF_YC_Val(SafeRLHFDataset):
+
+    NAME: str = 'safety_test/val'
+    ALIASES: tuple[str, ...] = ('yaswanthchittepu/safe_rlhf_safety_test/val',)
+    PATH: str = 'yaswanthchittepu/safe_rlhf_safety_test'
+    SPLIT: str = 'val'
+
+class SafeRLHF_YC_Safety(SafeRLHFDataset):
+
+    NAME: str = 'safety_test/safety'
+    ALIASES: tuple[str, ...] = ('yaswanthchittepu/safe_rlhf_safety_test/safety',)
+    PATH: str = 'yaswanthchittepu/safe_rlhf_safety_test'
+    SPLIT: str = 'safety'
+    

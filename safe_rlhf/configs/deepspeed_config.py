@@ -41,6 +41,7 @@ def get_deepspeed_train_config(
     max_length: int = 512,
     fp16: bool = False,
     bf16: bool = False,
+    max_grad_norm: float = None,
 ) -> dict[str, Any]:
     """Get the DeepSpeed config for training.
 
@@ -85,6 +86,8 @@ def get_deepspeed_train_config(
     if bf16 or 'bf16' in train_config:
         train_config.setdefault('bf16', {})
         train_config['bf16']['enabled'] = bf16
+    if(max_grad_norm is not None):
+        train_config["gradient_clipping"] = max_grad_norm
     return train_config
 
 

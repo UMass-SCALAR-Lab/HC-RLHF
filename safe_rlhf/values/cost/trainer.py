@@ -270,6 +270,19 @@ class CostTrainer(SupervisedTrainer):
                     + self.args.regularization
                     * torch.stack([lower_end_cost, higher_end_cost]).square().mean()
                 )
+        elif self.args.loss_type == 'sequence-wise-bt':
+            loss = (
+                -F.logsigmoid(higher_end_cost - lower_end_cost)
+                # - F.logsigmoid(lower_cost_sign * lower_end_cost)
+                # - F.logsigmoid(higher_cost_sign * higher_end_cost)
+            ).mean()
+
+            if self.args.regularization > 0.0:
+                loss = (
+                    loss
+                    + self.args.regularization
+                    * torch.stack([lower_end_cost, higher_end_cost]).square().mean()
+                )
         else:
             raise ValueError(f'Unknown loss type: {self.args.loss_type}')
 

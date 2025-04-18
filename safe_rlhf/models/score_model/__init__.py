@@ -58,6 +58,7 @@ MODEL_FOR_SCORE_MAPPING_NAMES: OrderedDict[str, str] = OrderedDict(
         # Score model mapping
         ('bloom', 'BloomForScore'),
         ('gemma', 'GemmaForScore'),
+        ('gemma2', 'Gemma2ForScore'),
         ('gpt_neo', 'GPTNeoForScore'),
         ('gpt_neox', 'GPTNeoXForScore'),
         ('gpt2', 'GPT2ForScore'),

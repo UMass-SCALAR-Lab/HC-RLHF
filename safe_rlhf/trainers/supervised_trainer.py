@@ -23,6 +23,9 @@ from typing import Any, ClassVar
 import deepspeed
 import torch
 import torch.distributed as dist
+import numpy as np
+import matplotlib.pyplot as plt
+
 from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
@@ -86,6 +89,7 @@ class SupervisedTrainer(TrainerBase):
 
     def init_datasets(self) -> None:
         """Initialize training and evaluation datasets."""
+        
         train_dataset = self.DATASET_TYPE(
             self.args.train_datasets,
             tokenizer=self.tokenizer,
@@ -112,7 +116,7 @@ class SupervisedTrainer(TrainerBase):
             )
         else:
             self.eval_dataloader = None
-
+        
         self.train_dataloader = DataLoader(
             train_dataset,
             collate_fn=train_dataset.get_collator(),
@@ -177,8 +181,78 @@ class SupervisedTrainer(TrainerBase):
         """Perform a single training step."""
         raise NotImplementedError
 
+    @torch.no_grad()
+    def eval(self, name=''):
+        # return {}
+        self.model.eval()
+        pref_margins_res = None
+        gt_margins_res = None
+        
+        for i, batch in enumerate(tqdm(self.eval_dataloader)):
+            info = self.loss(**to_device(batch, self.args.device))
+
+            # Prepare an empty tensor to hold gathered values
+            pref_margins_ = [torch.zeros_like(info['reward_margin']) for _ in range(dist.get_world_size())]
+            # Gather costs from all devices
+            dist.all_gather(pref_margins_, info['reward_margin'])
+            # Concatenate the gathered tensors
+            pref_margins_all = torch.cat(pref_margins_, dim=0).to(self.args.device)
+
+            gt = (batch['margin']).to(self.args.device)
+            gt_margins_ = [torch.zeros_like(gt) for _ in range(dist.get_world_size())]
+            # Gather costs from all devices
+            dist.all_gather(gt_margins_, gt)
+            # Concatenate the gathered tensors
+            gt_margins_all = torch.cat(gt_margins_, dim=0).to(self.args.device)
+
+            torch.cuda.empty_cache()
+            if(pref_margins_res is None):
+                pref_margins_res = pref_margins_all.flatten().detach().cpu()
+            else:
+                pref_margins_res = torch.cat((pref_margins_res, pref_margins_all.flatten().detach().cpu()))
+            if(gt_margins_res is None):
+                gt_margins_res = gt_margins_all.flatten().detach().cpu()
+            else:
+                gt_margins_res = torch.cat((gt_margins_res, gt_margins_all.flatten().detach().cpu()))
+        
+        pref_np = pref_margins_res.float().numpy()
+        gt_np = gt_margins_res.float().numpy()
+        np.savez(f"margins_eval_{name}.npz" if(name) else f"margins_eval.npz", pref=pref_np, gt=gt_np)
+        BINS=25
+
+        plt.figure(figsize=(8, 5))
+        plt.hist(pref_np, bins=BINS, alpha=0.6, label="Eval Margins", density=True)
+        plt.hist(gt_np, bins=BINS, alpha=0.6, label="GT Margins", density=True)
+
+        plt.title("Normalized Histogram of Margins")
+        plt.xlabel("Margin")
+        plt.ylabel("Density")
+        plt.legend()
+        # plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(f'hist_margins_eval_{name}.png' if(name) else f'hist_margins_eval.png')
+
+        fig, axs = plt.subplots(1, 2, figsize=(12, 4), sharey=True)
+        # Preferred margins histogram
+        axs[0].hist(pref_np, bins=BINS, density=True, color='red', alpha=0.7)
+        axs[0].set_title("Preferred Margins")
+        axs[0].set_xlabel("Margin")
+        axs[0].set_ylabel("Density")
+        # axs[0].grid(True)
+
+        axs[1].hist(gt_np, bins=BINS, density=True, color='blue', alpha=0.7)
+        axs[1].set_title("GT Margins")
+        axs[1].set_xlabel("Margin")
+
+        plt.suptitle("Normalized Histograms of Margins", fontsize=14)
+        plt.tight_layout()
+        plt.savefig(f'hist_margins_subplot_eval_{name}.png' if(name) else f'hist_margins_subplot_eval.png')
+
+
+
     def train(self) -> None:
         """Train the model."""
+
         self.logger.print('***** Running training *****')
 
         progress_bar = tqdm(

@@ -75,7 +75,7 @@ class DPOTrainer(SupervisedTrainer):
             trust_remote_code=self.args.trust_remote_code,
         )
         self.reference_model, _ = load_pretrained_models(
-            self.args.model_name_or_path,
+            self.args.model_name_or_path if(not self.args.ref_model_name_or_path) else self.args.ref_model_name_or_path,
             model_max_length=self.args.max_length,
             padding_side='left',
             auto_model_type=AutoModelForCausalLM,
@@ -105,6 +105,7 @@ class DPOTrainer(SupervisedTrainer):
         better_attention_mask: torch.BoolTensor,  # size = (B, L)
         worse_input_ids: torch.LongTensor,  # size = (B, L)
         worse_attention_mask: torch.BoolTensor,  # size = (B, L)
+        **kwargs
     ) -> dict[str, torch.Tensor]:
         """Loss function for the DPO algorithm.
 
@@ -117,8 +118,10 @@ class DPOTrainer(SupervisedTrainer):
         Returns:
             dict[str, torch.Tensor]: loss, reward, better sample reward, worse sample reward
         """
+
         assert better_input_ids.size(0) == worse_input_ids.size(0), 'batch size mismatch!'
         batch_size = better_input_ids.size(0)
+        margin = kwargs.get('margin', None)
 
         sequence_log_probs = self.compute_log_probs(  # size = (2 * B, L - 1)
             self.model.module,
@@ -145,9 +148,12 @@ class DPOTrainer(SupervisedTrainer):
         better_sample_rewards = []
         worse_sample_rewards = []
         for i in range(batch_size):
-            assert not torch.all(
-                torch.eq(better_input_ids[i], worse_input_ids[i]),
-            ).item(), 'The better and worse answers are the same!'
+            if(torch.all(torch.eq(better_input_ids[i], worse_input_ids[i]),).item()):
+                # import ipdb; ipdb.set_trace()
+                continue
+            # assert not torch.all(
+            #     torch.eq(better_input_ids[i], worse_input_ids[i]),
+            # ).item(), 'The better and worse answers are the same!'
             better_end_index = better_attention_mask[i].nonzero()[-1].squeeze().item()
             worse_end_index = worse_attention_mask[i].nonzero()[-1].squeeze().item()
             diverge_index = (
@@ -167,7 +173,10 @@ class DPOTrainer(SupervisedTrainer):
             better_log_ratio = better_log_prob - ref_better_log_prob
             worse_log_ratio = worse_log_prob - ref_worse_log_prob
 
-            losses.append(-F.logsigmoid(self.scale_coeff * (better_log_ratio - worse_log_ratio)))
+            if(margin is None):
+                losses.append(-F.logsigmoid(self.scale_coeff * (better_log_ratio - worse_log_ratio)-self.args.margin))
+            else:
+                losses.append(-F.logsigmoid(self.scale_coeff * (better_log_ratio - worse_log_ratio)-margin))
             better_sample_rewards.append(self.scale_coeff * better_log_ratio.detach())
             worse_sample_rewards.append(self.scale_coeff * worse_log_ratio.detach())
 
@@ -193,6 +202,7 @@ class DPOTrainer(SupervisedTrainer):
         better_attention_mask: torch.BoolTensor,  # size = (B, L)
         worse_input_ids: torch.LongTensor,  # size = (B, L)
         worse_attention_mask: torch.BoolTensor,  # size = (B, L)
+        **kwargs
     ) -> dict[str, Any]:
         """Perform a single training step.
 
@@ -210,6 +220,7 @@ class DPOTrainer(SupervisedTrainer):
             better_attention_mask=better_attention_mask,
             worse_input_ids=worse_input_ids,
             worse_attention_mask=worse_attention_mask,
+            **kwargs
         )
         loss = loss_dict['loss']
         self.model.backward(loss)

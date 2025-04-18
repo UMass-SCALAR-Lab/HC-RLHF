@@ -80,6 +80,51 @@ def parse_dataset(string: str) -> tuple[str, dict[str, Any]]:
     return name, {'proportion': proportion, 'path': path}
 
 
+class RawSamplePoP(TypedDict, total=False):
+    """Raw sample type.
+
+    For SupervisedDataset, should provide (input, answer) or (dialogue).
+    For PreferenceDataset, should provide (input, answer, other_answer, better).
+    For SafetyPreferenceDataset, should provide (input, answer, other_answer, safer, is_safe, is_other_safe).
+    For PromptOnlyDataset, should provide (input).
+
+    When input is a list, it would be processed as a dialogue.
+    """
+
+    pref_prompt: NotRequired[str | list[str]]
+    pref_chosen: NotRequired[str]
+    pref_rejected: NotRequired[str]
+    unpref_prompt: NotRequired[str | list[str]]
+    unpref_chosen: NotRequired[str]
+    unpref_rejected: NotRequired[str]
+    pref_score_chosen: NotRequired[float]
+    pref_score_rejected: NotRequired[float]
+    unpref_score_chosen: NotRequired[float]
+    unpref_score_rejected: NotRequired[float]
+    pref_gap: NotRequired[float]
+    unpref_gap: NotRequired[float]
+    pop_gap: NotRequired[float]
+
+    # Texts
+    # input: NotRequired[str | list[str]]  # either `input` or `dialogue` should be provided
+    # """User input text."""
+    # answer: NotRequired[str]
+    # """Assistant answer text."""
+    # other_answer: NotRequired[str]
+    # """Other assistant answer text via resampling."""
+    # dialogue: NotRequired[list[str]]  # either `input` or `dialogue` should be provided
+    # """Dialogue history."""
+
+    # # Flags
+    # better: NotRequired[bool]
+    # """Whether ``answer`` is better than ``other_answer``."""
+    # safer: NotRequired[bool]
+    # """Whether ``answer`` is safer than ``other_answer``."""
+    # is_safe: NotRequired[bool]
+    # """Whether ``answer`` is safe."""
+    # is_other_safe: NotRequired[bool]
+    # """Whether ``other_answer`` is safe."""
+
 class RawSample(TypedDict, total=False):
     """Raw sample type.
 
@@ -110,9 +155,14 @@ class RawSample(TypedDict, total=False):
     """Whether ``answer`` is safe."""
     is_other_safe: NotRequired[bool]
     """Whether ``other_answer`` is safe."""
+    score_chosen: NotRequired[float]
+    score_rejected: NotRequired[float]
+    margin: NotRequired[float]
 
 
-class RawDataset(Dataset[RawSample]):
+
+# class RawDataset(Dataset[RawSample]):
+class RawDataset(Dataset):
     """Dataset that provides raw text samples."""
 
     NAME: ClassVar[str]

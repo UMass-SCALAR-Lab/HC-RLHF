@@ -32,6 +32,7 @@ OUTPUT_DIR="${ROOT_DIR}/output/rm"
 unset HOSTFILE
 ZERO_STAGE=3
 OFFLOAD="none"
+LOG_RUN_NAME="default_reward_run" 
 while [[ "$#" -gt 0 ]]; do
 	arg="$1"
 	shift
@@ -70,6 +71,13 @@ while [[ "$#" -gt 0 ]]; do
 			;;
 		--offload=*)
 			OFFLOAD="${arg#*=}"
+			;;
+		--log_run_name)
+			LOG_RUN_NAME="$1"
+			shift
+			;;
+		--log_run_name=*)
+			LOG_RUN_NAME="${arg#*=}"
 			;;
 		*)
 			echo "Unknown parameter passed: '${arg}'" >&2
@@ -116,9 +124,9 @@ deepspeed "${DEEPSPEED_ARGS[@]}" \
 	--trust_remote_code True \
 	--loss_type sequence-wise \
 	--epochs 2 \
-	--per_device_train_batch_size 16 \
-	--per_device_eval_batch_size 16 \
-	--gradient_accumulation_steps 1 \
+	--per_device_train_batch_size 4 \
+	--per_device_eval_batch_size 4 \
+	--gradient_accumulation_steps 4 \
 	--gradient_checkpointing \
 	--regularization 0.001 \
 	--normalize_score_during_training False \
@@ -134,7 +142,10 @@ deepspeed "${DEEPSPEED_ARGS[@]}" \
 	--output_dir "${OUTPUT_DIR}" \
 	--log_type wandb \
 	--log_project Safe-RLHF-RM \
+	--log_run_name "${LOG_RUN_NAME}" \
 	--zero_stage "${ZERO_STAGE}" \
 	--offload "${OFFLOAD}" \
 	--bf16 True \
-	--tf32 True
+	--tf32 True \
+	# --eval_split_ratio 0.001 \
+	# --eval_datasets PKU-SafeRLHF-30K/test \

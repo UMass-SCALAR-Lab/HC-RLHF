@@ -32,6 +32,7 @@ OUTPUT_DIR="${ROOT_DIR}/output/sft"
 unset HOSTFILE
 ZERO_STAGE=3
 OFFLOAD="none"
+LOG_RUN_NAME="default_sft_run" 
 while [[ "$#" -gt 0 ]]; do
 	arg="$1"
 	shift
@@ -71,6 +72,13 @@ while [[ "$#" -gt 0 ]]; do
 		--offload=*)
 			OFFLOAD="${arg#*=}"
 			;;
+		--log_run_name)
+			LOG_RUN_NAME="$1"
+			shift
+			;;
+		--log_run_name=*)
+			LOG_RUN_NAME="${arg#*=}"
+			;;
 		*)
 			echo "Unknown parameter passed: '${arg}'" >&2
 			exit 1
@@ -109,13 +117,13 @@ exec 1> >(tee "${OUTPUT_DIR}/stdout.log" >&1) 2> >(tee "${OUTPUT_DIR}/stderr.log
 
 deepspeed "${DEEPSPEED_ARGS[@]}" \
 	--module safe_rlhf.finetune \
-	--train_datasets alpaca \
+	--train_datasets ultrafeedback-sft \
 	--model_name_or_path "${MODEL_NAME_OR_PATH}" \
-	--max_length 512 \
+	--max_length 2048 \
 	--trust_remote_code True \
-	--epochs 3 \
-	--per_device_train_batch_size 4 \
-	--per_device_eval_batch_size 4 \
+	--epochs 1 \
+	--per_device_train_batch_size 2 \
+	--per_device_eval_batch_size 2 \
 	--gradient_accumulation_steps 8 \
 	--gradient_checkpointing \
 	--learning_rate 2e-5 \
@@ -126,6 +134,7 @@ deepspeed "${DEEPSPEED_ARGS[@]}" \
 	--output_dir "${OUTPUT_DIR}" \
 	--log_type wandb \
 	--log_project Safe-RLHF-SFT \
+	--log_run_name "${LOG_RUN_NAME}" \
 	--zero_stage "${ZERO_STAGE}" \
 	--offload "${OFFLOAD}" \
 	--bf16 True \

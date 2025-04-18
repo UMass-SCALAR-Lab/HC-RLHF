@@ -419,3 +419,20 @@ Sessionx.vim
 tags
 # Persistent undo
 [._]*.un~
+
+
+# YC
+logs*
+hist_figs
+figs
+eval_npz
+temp
+tmp*
+*.png
+*.npz
+*.out
+*.err
+safety_test.py
+compare.py
+cost_histogram.py
+cpy.py

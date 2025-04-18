@@ -35,6 +35,8 @@ OUTPUT_DIR="${ROOT_DIR}/output/ppo-lag"
 unset HOSTFILE
 ZERO_STAGE=3
 OFFLOAD="none"
+LOG_RUN_NAME="ppo-lag-1gpu"
+THRESHOLD=0.
 while [[ "$#" -gt 0 ]]; do
 	arg="$1"
 	shift
@@ -102,6 +104,20 @@ while [[ "$#" -gt 0 ]]; do
 		--offload=*)
 			OFFLOAD="${arg#*=}"
 			;;
+		--log_run_name)
+			LOG_RUN_NAME="$1"
+			shift
+			;;
+		--log_run_name=*)
+			LOG_RUN_NAME="${arg#*=}"
+			;;
+		--threshold)
+			THRESHOLD="$1"
+			shift
+			;;
+		--threshold=*)
+			THRESHOLD="${arg#*=}"
+			;;
 		*)
 			echo "Unknown parameter passed: '${arg}'" >&2
 			exit 1
@@ -156,43 +172,51 @@ deepspeed "${DEEPSPEED_ARGS[@]}" \
 	--cost_model_name_or_path "${COST_MODEL_NAME_OR_PATH}" \
 	--cost_critic_model_name_or_path "${COST_CRITIC_MODEL_NAME_OR_PATH}" \
 	--max_length 512 \
-	--temperature 1.0 \
+	--temperature 1.2 \
 	--num_return_sequences 1 \
-	--repetition_penalty 1.0 \
+	--repetition_penalty 1.2 \
 	--trust_remote_code True \
 	--epochs 1 \
 	--update_iters 1 \
 	--per_device_prompt_batch_size 16 \
 	--per_device_train_batch_size 16 \
-	--gradient_accumulation_steps 1 \
-	--actor_lr 1e-5 \
-	--actor_weight_decay 0.01 \
+	--gradient_accumulation_steps 8 \
+	--actor_lr 9.65e-6 \
+	--actor_weight_decay 0 \
 	--actor_lr_scheduler_type cosine \
 	--actor_lr_warmup_ratio 0.03 \
 	--actor_gradient_checkpointing \
 	--critic_lr 5e-6 \
-	--critic_weight_decay 0.0 \
+	--critic_weight_decay 0.1 \
 	--critic_lr_scheduler_type constant \
 	--critic_lr_warmup_ratio 0.03 \
 	--critic_gradient_checkpointing \
 	--normalize_reward False \
 	--normalize_cost False \
 	--seed 42 \
-	--threshold 0.0 \
+	--threshold "${THRESHOLD}" \
 	--lambda_init 1.0 \
-	--lambda_lr 0.1 \
-	--lambda_max 5.0 \
+	--lambda_lr 0.01 \
+	--lambda_max 1000000.0 \
 	--lambda_update_delay_steps 0 \
 	--episode_cost_window_size 128 \
-	--kl_coeff 0.01 \
-	--clip_range_ratio 0.2 \
+	--kl_coeff 0.1 \
+	--clip_range_ratio 0.1 \
 	--clip_range_score 50.0 \
 	--clip_range_value 5.0 \
-	--ptx_coeff 16.0 \
+	--ptx_coeff 8.0 \
 	--output_dir "${OUTPUT_DIR}" \
 	--log_type wandb \
 	--log_project Safe-RLHF-PPO \
+	--log_run_name "${LOG_RUN_NAME}" \
+	--save_interval 250 \
 	--zero_stage "${ZERO_STAGE}" \
 	--offload "${OFFLOAD}" \
 	--bf16 True \
-	--tf32 True
+	--tf32 True \
+	# --eval_strategy steps \
+	# --eval_interval 75 \
+	# --need_eval \
+	# --eval_split_ratio 0.1 \
+	# --eval_datasets safety_test/val \
+	# --eval_datasets PKU-SafeRLHF/train \

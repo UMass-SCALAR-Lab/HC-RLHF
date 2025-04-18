@@ -81,7 +81,7 @@ def parse_arguments() -> argparse.Namespace:
     training_parser.add_argument(
         '--loss_type',
         type=str,
-        choices=['token-wise', 'sequence-wise'],
+        choices=['token-wise', 'sequence-wise','sequence-wise-bt'],
         default='sequence-wise',
         help=(
             'Calculate ranking loss with all token-wise cost outputs in the sequence or the '

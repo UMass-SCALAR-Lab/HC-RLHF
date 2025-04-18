@@ -46,6 +46,12 @@ def parse_arguments() -> argparse.Namespace:
         required=True,
     )
     model_parser.add_argument(
+        '--ref_model_name_or_path',
+        type=str,
+        help='Path to the refe model checkpoint or its name.',
+        required=True,
+    )
+    model_parser.add_argument(
         '--max_length',
         type=int,
         default=512,
@@ -83,6 +89,12 @@ def parse_arguments() -> argparse.Namespace:
         type=float,
         default=0.02,
         help='The coefficient for the KL divergence between the reference and actor policy.',
+    )
+    training_parser.add_argument(
+        '--margin',
+        type=float,
+        default=0.,
+        help='The Margin for the DPO Loss.',
     )
     training_parser.add_argument(
         '--epochs',
@@ -266,6 +278,12 @@ def parse_arguments() -> argparse.Namespace:
         choices=['none', 'parameter', 'optimizer', 'all'],
         help='Offload parameters and/or optimizer states to CPU.',
     )
+    deepspeed_parser.add_argument(
+        '--max_grad_norm',
+        type=float,
+        default=None,
+        help='Max Norm allowed for Gradients, before clipping',
+    )
     parser = deepspeed.add_config_arguments(parser)
 
     args = parser.parse_args()
@@ -315,8 +333,10 @@ def main() -> None:
     )
 
     trainer = DPOTrainer(args, ds_train_config, ds_eval_config)
-    trainer.train()
-    trainer.save()
+    # trainer.train()
+    # trainer.save()
+    
+    trainer.eval(name='dpo-margin-pop-random')
 
 
 if __name__ == '__main__':

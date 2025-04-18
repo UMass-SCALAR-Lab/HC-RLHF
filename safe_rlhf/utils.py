@@ -34,6 +34,8 @@ from optree.typing import PyTreeTypeVar
 from transformers import PreTrainedTokenizerBase
 from transformers.modeling_outputs import ModelOutput
 from transformers.tokenization_utils import BatchEncoding, PaddingStrategy, TruncationStrategy
+import deepspeed
+from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
 
 from safe_rlhf.configs.constants import PROMPT_ASSISTANT
 
@@ -290,3 +292,26 @@ def split_prompt_response(
         return prompt + partition, response
 
     return tuple(map(list, zip(*map(split_fn, texts))))
+
+def _z3_params_to_fetch(param_list):
+    return [
+        p for p in param_list
+        if hasattr(p, 'ds_id') and p.ds_status == ZeroParamStatus.NOT_AVAILABLE
+    ]
+
+
+def moving_average(model, model_ema, beta=0.99, device=None, zero_stage=0):
+    zero_stage_3 = (zero_stage == 3)
+    with torch.no_grad():
+        for param, param_ema in zip(model.parameters(),
+                                    model_ema.parameters()):
+            # TODO: use prefiltering for efficiency
+            params_to_fetch = _z3_params_to_fetch([param, param_ema
+                                                   ]) if zero_stage_3 else []
+            should_gather_param = len(params_to_fetch) > 0
+            with deepspeed.zero.GatheredParameters(
+                    params_to_fetch, enabled=should_gather_param):
+                data = param.data
+                if device is not None:
+                    data = data.to(device)
+                param_ema.data.copy_(torch.lerp(data, param_ema.data, beta))
